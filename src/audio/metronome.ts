@@ -124,9 +124,10 @@ class Metronome {
       const info = describeStep(cfg, this.index);
       const dur = stepSeconds(info.bpm);
       if (info.phase === "play" && this.playStart === null) this.playStart = this.nextTime;
-      if (info.click) this.click(this.nextTime, info.click);
-      if (info.guide) this.guide(this.nextTime, Math.min(dur * 0.9, 0.2));
-      this.queue.push({ time: this.nextTime, info });
+      const at = this.nextTime + info.delay * dur;
+      if (info.click) this.click(at, info.click);
+      if (info.guide) this.guide(at, Math.min(dur * 0.9, 0.2));
+      this.queue.push({ time: at, info });
       this.nextTime += dur;
       this.index += 1;
     }

@@ -1,7 +1,22 @@
-import type { ClickSettings } from "./types";
+import type { ClickSettings, Swing } from "./types";
 
 export const STEPS_PER_BAR = 16;
 export const STEPS_PER_BEAT = 4;
+
+/**
+ * How late the "&" lands, in sixteenth-note steps. The straight "&" is step 2 of 4 (50% of the beat).
+ * Light swing puts it at 60% of the beat; the full shuffle puts it on the third triplet, 2/3 of the beat.
+ */
+export const SWING_DELAY: Record<Swing, number> = {
+  straight: 0,
+  light: 0.4,
+  shuffle: 2 / 3,
+};
+
+export function swingDelay(click: ClickSettings, stepInBar: number): number {
+  if (stepInBar % STEPS_PER_BEAT !== 2) return 0;
+  return SWING_DELAY[click.swing ?? "straight"];
+}
 
 export type ClickKind = "accent" | "beat" | "sub";
 
@@ -40,6 +55,8 @@ export interface StepInfo {
   /** True during a silent gap bar. */
   muted: boolean;
   bpm: number;
+  /** Fraction of a step to delay this step's sounds (swing). 0 when straight. */
+  delay: number;
 }
 
 export function countInSteps(cfg: ScheduleConfig): number {
@@ -94,6 +111,7 @@ export function describeStep(cfg: ScheduleConfig, index: number): StepInfo {
       guide: false,
       muted: false,
       bpm: bpmForBar(cfg, -1),
+      delay: 0,
     };
   }
   const playStep = index - lead;
@@ -113,6 +131,7 @@ export function describeStep(cfg: ScheduleConfig, index: number): StepInfo {
     guide: cfg.guide && hit && !muted,
     muted,
     bpm: bpmForBar(cfg, bar),
+    delay: swingDelay(cfg.click, stepInBar),
   };
 }
 

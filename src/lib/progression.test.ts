@@ -5,6 +5,7 @@ import type { Song } from "./types";
 
 const staccato = EXERCISE_BY_ID["staccato-16ths"];
 const pump = EXERCISE_BY_ID["quarter-pump"];
+const shufflePump = EXERCISE_BY_ID["shuffle-pump"];
 
 describe("tempo progression", () => {
   it("starts at the exercise's starting tempo", () => {
@@ -56,6 +57,16 @@ describe("stage progression", () => {
   it("stays on the last stage", () => {
     const last = pump.progression.type === "stages" ? pump.progression.stages.length - 1 : 0;
     expect(applyResult(pump, { stage: last }, "clean", 120).progress.stage).toBe(last);
+  });
+
+  it("shuffle pump is a time exercise whose every stage swings the shuffle", () => {
+    expect(shufflePump.goal).toBe("time");
+    expect(shufflePump.progression.type).toBe("stages");
+    if (shufflePump.progression.type !== "stages") return;
+    expect(shufflePump.progression.stages.every((s) => s.click.swing === "shuffle")).toBe(true);
+    expect(applyResult(shufflePump, { stage: 0 }, "clean", 90).progress.stage).toBe(1);
+    expect(applyResult(shufflePump, { stage: 2 }, "tooHard", 90).progress.stage).toBe(1);
+    expect(currentSetting(shufflePump, undefined).click.swing).toBe("shuffle");
   });
 });
 

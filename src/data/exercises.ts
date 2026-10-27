@@ -6,6 +6,13 @@ const beats = (subdivision: ClickSettings["subdivision"] = "none"): ClickSetting
   gap: null,
 });
 
+/** Shuffle-feel click: the "&" sits on the third triplet. */
+const shuffle = (
+  mode: ClickSettings["mode"],
+  subdivision: ClickSettings["subdivision"] = "none",
+  gap: ClickSettings["gap"] = null,
+): ClickSettings => ({ mode, subdivision, gap, swing: "shuffle" });
+
 const SIXTEENTHS = "x".repeat(16);
 const EIGHTHS = "x.".repeat(8);
 
@@ -42,6 +49,35 @@ export const EXERCISES: Exercise[] = [
         { label: "Slow: click on 2 and 4 at 60", bpm: 60, click: { mode: "twoFour", subdivision: "none", gap: null } },
         { label: "Slow: one bar on, three bars silent", bpm: 60, click: { mode: "all", subdivision: "none", gap: { on: 1, off: 3 } } },
         { label: "Fast: one bar on, three bars silent at 120", bpm: 120, click: { mode: "all", subdivision: "none", gap: { on: 1, off: 3 } } },
+      ],
+    },
+  },
+  {
+    id: "shuffle-pump",
+    title: "Shuffle pump",
+    goal: "time",
+    summary: "Eighth-note shuffle on one note, locked to the click, then holding the swing as the click thins out.",
+    steps: [
+      "Play a shuffle on one note. Open A or E is fine. Count triplets, 1-trip-let 2-trip-let, and play the first and third of each triplet: one on the beat, one on the let.",
+      "Alternate index and middle on every note, no exceptions.",
+      "Make the long note and the short note the same volume. The swing comes from the timing, not from accenting.",
+      "Early stages click the swung eighths for you. Later the click drops out: keep the same lilt on your own.",
+    ],
+    focus: "The second note of each pair lands late, two thirds of the way through the beat. If it creeps toward a straight eighth, the shuffle goes stiff.",
+    pattern: "x.x.".repeat(4),
+    click: shuffle("all", "8ths"),
+    progression: {
+      type: "stages",
+      stages: [
+        { label: "Click on every beat, shuffle clicks between", bpm: 90, click: shuffle("all", "8ths") },
+        { label: "Click on every beat", bpm: 90, click: shuffle("all") },
+        { label: "Click on 2 and 4", bpm: 90, click: shuffle("twoFour") },
+        { label: "Click on 2 and 4, every fourth bar silent", bpm: 90, click: shuffle("twoFour", "none", { on: 3, off: 1 }) },
+        { label: "Click on beat 1 only", bpm: 90, click: shuffle("one") },
+        { label: "One bar of click, three bars silent", bpm: 90, click: shuffle("all", "none", { on: 1, off: 3 }) },
+        { label: "Slow: click on 2 and 4 at 70", bpm: 70, click: shuffle("twoFour") },
+        { label: "Slow: one bar on, three bars silent at 70", bpm: 70, click: shuffle("all", "none", { on: 1, off: 3 }) },
+        { label: "Fast: one bar on, three bars silent at 120", bpm: 120, click: shuffle("all", "none", { on: 1, off: 3 }) },
       ],
     },
   },

@@ -6,6 +6,9 @@ export type ClickMode = "all" | "twoFour" | "one";
 /** Extra quiet clicks between beats. */
 export type Subdivision = "none" | "8ths" | "16ths";
 
+/** How far the "&" of each beat is pushed late. Straight is even eighths, shuffle is the triplet feel. */
+export type Swing = "straight" | "light" | "shuffle";
+
 export interface Gap {
   /** Bars with the click on. */
   on: number;
@@ -17,6 +20,8 @@ export interface ClickSettings {
   mode: ClickMode;
   subdivision: Subdivision;
   gap: Gap | null;
+  /** Timing of the "&" (clicks and guide tone). Missing means straight. */
+  swing?: Swing;
 }
 
 export interface TempoProgression {

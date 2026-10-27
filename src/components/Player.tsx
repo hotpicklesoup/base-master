@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { metronome } from "../audio/metronome";
 import { keepAwake } from "../audio/wakeLock";
 import type { ScheduleConfig, StepInfo } from "../lib/schedule";
-import type { ClickMode, ClickSettings, Gap, Result, Subdivision } from "../lib/types";
+import type { ClickMode, ClickSettings, Gap, Result, Subdivision, Swing } from "../lib/types";
 import { useStore } from "../state";
 import { Fingerboard } from "./Fingerboard";
 import type { PlayItem } from "./playItem";
@@ -29,6 +29,12 @@ const SUBDIVISIONS: { value: Subdivision; label: string }[] = [
   { value: "16ths", label: "16ths" },
 ];
 
+const SWINGS: { value: Swing; label: string }[] = [
+  { value: "straight", label: "Straight" },
+  { value: "light", label: "Light swing" },
+  { value: "shuffle", label: "Shuffle" },
+];
+
 const GAPS: { value: string; label: string; gap: Gap | null }[] = [
   { value: "none", label: "Off", gap: null },
   { value: "3-1", label: "3 on, 1 off", gap: { on: 3, off: 1 } },
@@ -41,8 +47,9 @@ const gapKey = (g: Gap | null) => (g ? `${g.on}-${g.off}` : "none");
 export function describeClick(c: ClickSettings): string {
   const mode = c.mode === "all" ? "Click on every beat" : c.mode === "twoFour" ? "Click on 2 and 4" : "Click on beat 1";
   const sub = c.subdivision === "none" ? "" : `, ${c.subdivision === "8ths" ? "eighths" : "sixteenths"} between`;
+  const feel = c.swing === "shuffle" ? ", shuffle feel" : c.swing === "light" ? ", light swing" : "";
   const gap = c.gap ? `, ${c.gap.on} bar${c.gap.on > 1 ? "s" : ""} on and ${c.gap.off} off` : "";
-  return mode + sub + gap;
+  return mode + sub + feel + gap;
 }
 
 function formatTime(s: number): string {
@@ -241,6 +248,12 @@ export function Player({ item, minutes, inRoutine, onRecorded, onSkip }: Props) 
               options={SUBDIVISIONS}
               value={click.subdivision}
               onChange={(subdivision) => setClick({ ...click, subdivision })}
+            />
+            <Segmented
+              label="Feel"
+              options={SWINGS}
+              value={click.swing ?? "straight"}
+              onChange={(swing) => setClick({ ...click, swing })}
             />
             <Segmented
               label="Silent bars"

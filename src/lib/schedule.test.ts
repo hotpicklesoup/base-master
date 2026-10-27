@@ -56,6 +56,28 @@ describe("describeStep", () => {
     expect(first.guide).toBe(true);
   });
 
+  it("delays only the & of each beat when swung", () => {
+    const shuffle = { ...base, click: { ...base.click, subdivision: "8ths" as const, swing: "shuffle" as const } };
+    const delays = Array.from({ length: 8 }, (_, i) => describeStep(shuffle, i).delay);
+    expect(delays.map((d) => Math.round(d * 100))).toEqual([0, 0, 67, 0, 0, 0, 67, 0]);
+    // The swung & lands at 2/3 of the beat: 2.667 of 4 steps.
+    expect(2 + delays[2]).toBeCloseTo((2 / 3) * 4, 5);
+  });
+
+  it("puts light swing between straight and shuffle", () => {
+    const light = { ...base, click: { ...base.click, swing: "light" as const } };
+    const d = describeStep(light, 2).delay;
+    expect(d).toBeGreaterThan(0);
+    expect(d).toBeLessThan(2 / 3);
+  });
+
+  it("stays straight by default and in the count-in", () => {
+    expect(describeStep(base, 2).delay).toBe(0);
+    const cfg = { ...base, countIn: true, click: { ...base.click, swing: "shuffle" as const } };
+    expect(describeStep(cfg, 2).delay).toBe(0);
+    expect(describeStep(cfg, 18).delay).toBeGreaterThan(0);
+  });
+
   it("loops multi-bar patterns across bars", () => {
     const cfg = { ...base, pattern: "x..".repeat(16) };
     expect(describeStep(cfg, 47).patternStep).toBe(47);
