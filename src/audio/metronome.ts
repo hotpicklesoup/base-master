@@ -125,7 +125,7 @@ class Metronome {
       const dur = stepSeconds(info.bpm);
       if (info.phase === "play" && this.playStart === null) this.playStart = this.nextTime;
       if (info.click) this.click(this.nextTime, info.click);
-      if (info.guide) this.guide(this.nextTime, Math.min(dur * 0.9, 0.2));
+      if (info.guide) this.guide(this.nextTime, Math.min(dur * 0.9, 0.2), info.guideLevel);
       this.queue.push({ time: this.nextTime, info });
       this.nextTime += dur;
       this.index += 1;
@@ -149,23 +149,42 @@ class Metronome {
     this.tone(time, freq, 0.045, gain, "triangle");
   }
 
-  /** A short plucked tone that plays the exercise rhythm. */
-  private guide(time: number, dur: number) {
+  /**
+   * A plucked bass note (A2) that plays the exercise rhythm. A triangle body plus a sawtooth through
+   * a low-pass that closes as the note dies, like a finger-style pluck. Harder notes are louder and brighter.
+   */
+  private guide(time: number, dur: number, level: number) {
     const ctx = this.ctx!;
-    const osc = ctx.createOscillator();
+    const freq = 110;
+    const peak = 0.12 + 0.4 * level;
+    const end = time + dur;
     const filter = ctx.createBiquadFilter();
     const env = ctx.createGain();
-    osc.type = "sawtooth";
-    osc.frequency.value = 110;
     filter.type = "lowpass";
-    filter.frequency.setValueAtTime(1400, time);
-    filter.frequency.exponentialRampToValueAtTime(300, time + dur);
+    filter.Q.value = 2;
+    filter.frequency.setValueAtTime(500 + 2200 * level, time);
+    filter.frequency.exponentialRampToValueAtTime(250, time + dur * 0.8);
     env.gain.setValueAtTime(0.0001, time);
-    env.gain.exponentialRampToValueAtTime(0.35, time + 0.004);
-    env.gain.exponentialRampToValueAtTime(0.0001, time + dur);
-    osc.connect(filter).connect(env).connect(this.master!);
-    osc.start(time);
-    osc.stop(time + dur + 0.02);
+    env.gain.exponentialRampToValueAtTime(peak, time + 0.003);
+    env.gain.exponentialRampToValueAtTime(peak * 0.45, time + dur * 0.4);
+    env.gain.exponentialRampToValueAtTime(0.0001, end);
+    filter.connect(env).connect(this.master!);
+    const layers: [OscillatorType, number][] = [
+      ["triangle", 1],
+      ["sawtooth", 0.5],
+    ];
+    for (const [type, amount] of layers) {
+      const osc = ctx.createOscillator();
+      const mix = ctx.createGain();
+      osc.type = type;
+      // The string settles from slightly sharp as it is plucked.
+      osc.frequency.setValueAtTime(freq * 1.025, time);
+      osc.frequency.exponentialRampToValueAtTime(freq, time + 0.025);
+      mix.gain.value = amount;
+      osc.connect(mix).connect(filter);
+      osc.start(time);
+      osc.stop(end + 0.02);
+    }
   }
 
   private tone(time: number, freq: number, dur: number, peak: number, type: OscillatorType) {

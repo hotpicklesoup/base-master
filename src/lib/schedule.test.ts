@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bpmForBar, COUNT_LABELS, describeStep, type ScheduleConfig } from "./schedule";
+import { bpmForBar, COUNT_LABELS, describeStep, guideLevel, type ScheduleConfig } from "./schedule";
 
 const base: ScheduleConfig = {
   bpm: 100,
@@ -61,6 +61,31 @@ describe("describeStep", () => {
     expect(describeStep(cfg, 47).patternStep).toBe(47);
     expect(describeStep(cfg, 48).patternStep).toBe(0);
     expect(describeStep(cfg, 18).bar).toBe(1);
+  });
+});
+
+describe("guideLevel", () => {
+  it("plays beat 1 hardest and the e and a softest", () => {
+    const at = (step: number) => guideLevel(step, 0);
+    expect(at(0)).toBeGreaterThan(at(4));
+    expect(at(4)).toBeGreaterThan(at(2));
+    expect(at(2)).toBeGreaterThan(at(1));
+  });
+
+  it("stays in range and is repeatable", () => {
+    for (let i = 0; i < 200; i++) {
+      const v = guideLevel(i % 16, i);
+      expect(v).toBeGreaterThanOrEqual(0.3);
+      expect(v).toBeLessThanOrEqual(1);
+      expect(guideLevel(i % 16, i)).toBe(v);
+    }
+  });
+
+  it("is only set on guide notes", () => {
+    const cfg = { ...base, guide: true };
+    expect(describeStep(cfg, 0).guideLevel).toBeGreaterThan(0);
+    expect(describeStep(cfg, 1).guideLevel).toBe(0);
+    expect(describeStep(base, 0).guideLevel).toBe(0);
   });
 });
 

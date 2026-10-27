@@ -37,6 +37,8 @@ export interface StepInfo {
   patternStep: number;
   click: ClickKind | null;
   guide: boolean;
+  /** How hard the guide note is played, 0..1. 0 when there is no guide note. */
+  guideLevel: number;
   /** True during a silent gap bar. */
   muted: boolean;
   bpm: number;
@@ -78,6 +80,17 @@ function clickFor(click: ClickSettings, stepInBar: number): ClickKind | null {
   return null;
 }
 
+/**
+ * How hard a guide note is played, 0..1. Beats are strongest, then eighths, then the "e" and "a".
+ * A small repeatable wobble keeps runs of sixteenths from sounding machine-gunned.
+ */
+export function guideLevel(stepInBar: number, index: number): number {
+  const base =
+    stepInBar === 0 ? 1 : stepInBar % STEPS_PER_BEAT === 0 ? 0.86 : stepInBar % 2 === 0 ? 0.72 : 0.58;
+  const wobble = (((index * 7919) % 11) - 5) / 100; // -0.05..0.05, same every run
+  return Math.min(1, Math.max(0.3, base + wobble));
+}
+
 /** Describe what happens at an absolute step. Pure, so it can be tested without audio. */
 export function describeStep(cfg: ScheduleConfig, index: number): StepInfo {
   const lead = countInSteps(cfg);
@@ -92,6 +105,7 @@ export function describeStep(cfg: ScheduleConfig, index: number): StepInfo {
       patternStep: -1,
       click: onBeat ? (stepInBar === 0 ? "accent" : "beat") : null,
       guide: false,
+      guideLevel: 0,
       muted: false,
       bpm: bpmForBar(cfg, -1),
     };
@@ -103,6 +117,7 @@ export function describeStep(cfg: ScheduleConfig, index: number): StepInfo {
   const patternStep = playStep % len;
   const muted = isMutedBar(cfg.click, bar);
   const hit = cfg.pattern[patternStep] === "x";
+  const playGuide = cfg.guide && hit && !muted;
   return {
     index,
     phase: "play",
@@ -110,7 +125,8 @@ export function describeStep(cfg: ScheduleConfig, index: number): StepInfo {
     stepInBar,
     patternStep,
     click: muted ? null : clickFor(cfg.click, stepInBar),
-    guide: cfg.guide && hit && !muted,
+    guide: playGuide,
+    guideLevel: playGuide ? guideLevel(stepInBar, index) : 0,
     muted,
     bpm: bpmForBar(cfg, bar),
   };
