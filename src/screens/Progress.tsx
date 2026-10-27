@@ -4,7 +4,7 @@ import { EXERCISES, EXERCISE_BY_ID } from "../data/exercises";
 import { addDays, weekStart } from "../lib/dates";
 import { currentSetting } from "../lib/progression";
 import { exportJson, importJson } from "../lib/storage";
-import type { LogEntry } from "../lib/types";
+import type { AppState, LogEntry } from "../lib/types";
 import { useStore } from "../state";
 
 const GOAL_ID = "staccato-16ths";
@@ -22,6 +22,7 @@ export function cleanByDay(log: LogEntry[], itemId: string): TempoPoint[] {
 export function Progress() {
   const { state, today, replaceAll } = useStore();
   const [notice, setNotice] = useState<string | null>(null);
+  const [pending, setPending] = useState<AppState | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const goalEx = EXERCISE_BY_ID[GOAL_ID];
@@ -51,10 +52,8 @@ export function Progress() {
     e.target.value = "";
     if (!file) return;
     try {
-      const next = importJson(await file.text());
-      if (!window.confirm("Replace everything on this device with the backup?")) return;
-      replaceAll(next);
-      setNotice("Backup restored.");
+      setPending(importJson(await file.text()));
+      setNotice(null);
     } catch (err) {
       setNotice(err instanceof Error ? err.message : "That file couldn't be read.");
     }
@@ -130,6 +129,29 @@ export function Progress() {
           </button>
           <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={restore} />
         </div>
+        {pending && (
+          <div className="confirm" role="alertdialog" aria-label="Restore backup">
+            <p>
+              Replace everything on this device with this backup? It has {pending.log.length} logged run{pending.log.length === 1 ? "" : "s"} and{" "}
+              {pending.songs.length} song{pending.songs.length === 1 ? "" : "s"}.
+            </p>
+            <div className="form-actions">
+              <button
+                className="primary"
+                onClick={() => {
+                  replaceAll(pending);
+                  setPending(null);
+                  setNotice("Backup restored.");
+                }}
+              >
+                Replace with backup
+              </button>
+              <button className="secondary" onClick={() => setPending(null)}>
+                Keep what's here
+              </button>
+            </div>
+          </div>
+        )}
         {notice && (
           <p className="toast" role="status">
             {notice}
