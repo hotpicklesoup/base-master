@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bpmForBar, COUNT_LABELS, describeStep, type ScheduleConfig } from "./schedule";
+import { bpmForBar, COUNT_LABELS, describeStep, exampleBars, holdStepsAt, type ScheduleConfig } from "./schedule";
 
 const base: ScheduleConfig = {
   bpm: 100,
@@ -82,5 +82,57 @@ describe("bpmForBar", () => {
 describe("COUNT_LABELS", () => {
   it("counts sixteenths", () => {
     expect(COUNT_LABELS.slice(0, 8)).toEqual(["1", "e", "&", "a", "2", "e", "&", "a"]);
+  });
+});
+
+describe("example mode", () => {
+  const example: ScheduleConfig = { ...base, countIn: true, example: { bars: 4 } };
+
+  it("plays the guide even without the guide option", () => {
+    expect(describeStep(example, 16).guide).toBe(true);
+    expect(describeStep({ ...base, countIn: true }, 16).guide).toBe(false);
+  });
+
+  it("keeps the guide going through silent click bars", () => {
+    const cfg = { ...example, click: { ...base.click, gap: { on: 1, off: 3 } } };
+    const silent = describeStep(cfg, 16 + 16);
+    expect(silent.muted).toBe(true);
+    expect(silent.click).toBeNull();
+    expect(silent.guide).toBe(true);
+  });
+
+  it("still mutes the guide in silent bars outside example mode", () => {
+    const cfg = { ...base, guide: true, click: { ...base.click, gap: { on: 1, off: 3 } } };
+    expect(describeStep(cfg, 16).guide).toBe(false);
+  });
+});
+
+describe("holdStepsAt", () => {
+  it("measures to the next hit, wrapping round the loop", () => {
+    expect(holdStepsAt("x..x", 0)).toBe(3);
+    expect(holdStepsAt("x..x", 3)).toBe(1);
+    expect(holdStepsAt("x...", 0)).toBe(4);
+    expect(holdStepsAt("xxxx", 2)).toBe(1);
+  });
+
+  it("is reported on each step", () => {
+    expect(describeStep({ ...base, pattern: "x..x".repeat(4) }, 0).holdSteps).toBe(3);
+  });
+});
+
+describe("exampleBars", () => {
+  const plain = { mode: "all" as const, subdivision: "none" as const, gap: null };
+
+  it("plays at least four bars", () => {
+    expect(exampleBars("x".repeat(16), plain)).toBe(4);
+  });
+
+  it("finishes whole trips round a three-bar pattern", () => {
+    expect(exampleBars("x..".repeat(16), plain)).toBe(6);
+  });
+
+  it("includes a silent bar when the click has gaps", () => {
+    expect(exampleBars("x".repeat(16), { ...plain, gap: { on: 1, off: 3 } })).toBe(4);
+    expect(exampleBars("x".repeat(16), { ...plain, gap: { on: 3, off: 2 } })).toBe(5);
   });
 });

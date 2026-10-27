@@ -23,6 +23,13 @@ export interface ScheduleConfig {
   /** One bar of clicks before the exercise starts. */
   countIn: boolean;
   ramp: Ramp | null;
+  /** Staccato exercise: guide notes are cut short instead of held to the next hit. */
+  staccato?: boolean;
+  /**
+   * Example mode: play the rhythm as the model of what "correct" sounds like, then stop after `bars`.
+   * The guide keeps playing through silent click bars, because that is the point of those bars.
+   */
+  example?: { bars: number };
 }
 
 export interface StepInfo {
@@ -37,6 +44,8 @@ export interface StepInfo {
   patternStep: number;
   click: ClickKind | null;
   guide: boolean;
+  /** Sixteenths from this step to the next hit in the pattern, for how long a guide note rings. */
+  holdSteps: number;
   /** True during a silent gap bar. */
   muted: boolean;
   bpm: number;
@@ -78,6 +87,25 @@ function clickFor(click: ClickSettings, stepInBar: number): ClickKind | null {
   return null;
 }
 
+/** Sixteenths until the next "x" after this one, wrapping around the loop. */
+export function holdStepsAt(pattern: string, patternStep: number): number {
+  const len = pattern.length;
+  for (let n = 1; n <= len; n++) {
+    if (pattern[(patternStep + n) % len] === "x") return n;
+  }
+  return len || 1;
+}
+
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+
+/** Bars for an example: at least four, whole trips round the pattern and the gap cycle. */
+export function exampleBars(pattern: string, click: ClickSettings): number {
+  const patternBars = Math.max(1, Math.ceil(pattern.length / STEPS_PER_BAR));
+  const gapBars = click.gap ? click.gap.on + click.gap.off : 1;
+  const cycle = (patternBars * gapBars) / gcd(patternBars, gapBars);
+  return Math.ceil(Math.max(4, gapBars) / cycle) * cycle;
+}
+
 /** Describe what happens at an absolute step. Pure, so it can be tested without audio. */
 export function describeStep(cfg: ScheduleConfig, index: number): StepInfo {
   const lead = countInSteps(cfg);
@@ -92,6 +120,7 @@ export function describeStep(cfg: ScheduleConfig, index: number): StepInfo {
       patternStep: -1,
       click: onBeat ? (stepInBar === 0 ? "accent" : "beat") : null,
       guide: false,
+      holdSteps: 1,
       muted: false,
       bpm: bpmForBar(cfg, -1),
     };
@@ -110,7 +139,8 @@ export function describeStep(cfg: ScheduleConfig, index: number): StepInfo {
     stepInBar,
     patternStep,
     click: muted ? null : clickFor(cfg.click, stepInBar),
-    guide: cfg.guide && hit && !muted,
+    guide: (cfg.guide || Boolean(cfg.example)) && hit && (!muted || Boolean(cfg.example)),
+    holdSteps: holdStepsAt(cfg.pattern, patternStep),
     muted,
     bpm: bpmForBar(cfg, bar),
   };

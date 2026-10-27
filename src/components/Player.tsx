@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { metronome } from "../audio/metronome";
 import { keepAwake } from "../audio/wakeLock";
-import type { ScheduleConfig, StepInfo } from "../lib/schedule";
+import { exampleBars, type ScheduleConfig, type StepInfo } from "../lib/schedule";
 import type { ClickMode, ClickSettings, Gap, Result, Subdivision } from "../lib/types";
 import { useStore } from "../state";
 import { Fingerboard } from "./Fingerboard";
@@ -61,6 +61,7 @@ export function Player({ item, minutes, inRoutine, onRecorded, onSkip }: Props) 
   const [guide, setGuide] = useState(false);
   const [rampOn, setRampOn] = useState(Boolean(item.rampIn));
   const [playing, setPlaying] = useState(false);
+  const [hearing, setHearing] = useState(false);
   const [step, setStep] = useState<StepInfo | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [showOptions, setShowOptions] = useState(false);
@@ -72,13 +73,23 @@ export function Player({ item, minutes, inRoutine, onRecorded, onSkip }: Props) 
 
   const ramp = rampOn ? { from: Math.max(40, bpm - 8), to: bpm, step: 2, everyBars: 4 } : null;
   const config: ScheduleConfig = useMemo(
-    () => ({ bpm, pattern: item.pattern, click, guide, countIn: settings.countIn, ramp }),
+    () => ({ bpm, pattern: item.pattern, click, guide, countIn: settings.countIn, ramp, staccato: item.staccato }),
     // `ramp` is derived from bpm and rampOn, which are both listed.
-    [bpm, item.pattern, click, guide, settings.countIn, rampOn],
+    [bpm, item.pattern, item.staccato, click, guide, settings.countIn, rampOn],
   );
 
   // Follow the audio clock for the fingerboard and tempo display.
   useEffect(() => metronome.subscribe(setStep), []);
+
+  // An example stops by itself after its last bar.
+  useEffect(
+    () =>
+      metronome.onEnd(() => {
+        setHearing(false);
+        setStep(null);
+      }),
+    [],
+  );
 
   // Push changes to the engine while playing.
   useEffect(() => {
@@ -108,8 +119,27 @@ export function Player({ item, minutes, inRoutine, onRecorded, onSkip }: Props) 
     [],
   );
 
+  // The example plays the exercise as it should sound, at the tempo shown, with the click as currently set.
+  const hear = async () => {
+    if (hearing) {
+      metronome.stop();
+      setHearing(false);
+      setStep(null);
+      return;
+    }
+    await metronome.start({
+      ...config,
+      guide: true,
+      countIn: true,
+      ramp: null,
+      example: { bars: exampleBars(item.pattern, click) },
+    });
+    setHearing(true);
+  };
+
   const start = async () => {
     setMessage(null);
+    setHearing(false);
     await metronome.start(config);
     setPlaying(true);
     if (settings.keepAwake) keepAwake(true);
@@ -166,7 +196,7 @@ export function Player({ item, minutes, inRoutine, onRecorded, onSkip }: Props) 
         {item.notes && <p className="ex-notes">{item.notes}</p>}
       </header>
 
-      <Fingerboard pattern={item.pattern} step={step} playing={playing} />
+      <Fingerboard pattern={item.pattern} step={step} playing={playing || hearing} />
 
       <div className="tempo">
         <div className="tempo-readout" aria-live="off">
@@ -208,6 +238,19 @@ export function Player({ item, minutes, inRoutine, onRecorded, onSkip }: Props) 
         </button>
       </div>
       <p className="transport-label">{playing ? "Stop" : "Start"}</p>
+
+      {item.kind === "exercise" && (
+        <div className="example">
+          <button className={`secondary example-btn${hearing ? " on" : ""}`} onClick={hear} disabled={playing} aria-pressed={hearing}>
+            {hearing ? "Stop the example" : "Hear how it should sound"}
+          </button>
+          <p className="example-note">
+            {hearing
+              ? "A bass tone plays the rhythm over the click, after a count-in bar."
+              : "Plays a few bars at this tempo with the click as set below."}
+          </p>
+        </div>
+      )}
 
       {minutes ? (
         <div className="timer">

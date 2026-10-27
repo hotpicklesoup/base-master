@@ -66,6 +66,8 @@ export interface Exercise {
   progression: Progression;
   /** Start each run a little below working tempo and climb to it. */
   rampIn?: boolean;
+  /** Notes are played short, so the example cuts each one off instead of holding it. */
+  staccato?: boolean;
   /** Rotating daily variants, e.g. finger orders. Replaces {variant} in the summary. */
   variants?: string[];
 }

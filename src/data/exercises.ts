@@ -61,6 +61,7 @@ export const EXERCISES: Exercise[] = [
     click: beats(),
     progression: { type: "tempo", start: 70, step: 2, target: 100, max: 120, min: 50 },
     rampIn: true,
+    staccato: true,
   },
   {
     id: "dotted-long-short",
@@ -140,6 +141,7 @@ export const EXERCISES: Exercise[] = [
     click: beats(),
     progression: { type: "tempo", start: 60, step: 2, target: 100, max: 120, min: 50 },
     rampIn: true,
+    staccato: true,
   },
   {
     id: "spider",

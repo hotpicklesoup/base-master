@@ -16,6 +16,11 @@ const START_DELAY_S = 0.08;
 
 type Listener = (info: StepInfo) => void;
 
+/** Share of the gap to the next hit that a guide note rings for. */
+const SUSTAIN = 0.9;
+const STACCATO = 0.35;
+const MAX_NOTE_S = 1.5;
+
 interface Scheduled {
   time: number;
   info: StepInfo;
@@ -32,12 +37,21 @@ class Metronome {
   private playStart: number | null = null;
   private queue: Scheduled[] = [];
   private listeners = new Set<Listener>();
+  private endListeners = new Set<() => void>();
+  /** Audio-clock time when an example finishes, once everything has been scheduled. */
+  private endTime: number | null = null;
   private volume = 0.8;
   playing = false;
 
   subscribe(fn: Listener): () => void {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
+  }
+
+  /** Called when an example reaches its last bar and stops by itself. */
+  onEnd(fn: () => void): () => void {
+    this.endListeners.add(fn);
+    return () => this.endListeners.delete(fn);
   }
 
   setVolume(v: number) {
@@ -54,6 +68,7 @@ class Metronome {
     this.index = 0;
     this.queue = [];
     this.playStart = null;
+    this.endTime = null;
     this.nextTime = ctx.currentTime + START_DELAY_S;
     this.playing = true;
     this.timer = setInterval(() => this.tick(), LOOKAHEAD_MS);
@@ -65,7 +80,7 @@ class Metronome {
   update(cfg: ScheduleConfig) {
     if (!this.cfg) return;
     // The count-in is fixed once started; changing it mid-run would shift the bar count.
-    this.cfg = { ...cfg, countIn: this.cfg.countIn };
+    this.cfg = { ...cfg, countIn: this.cfg.countIn, example: this.cfg.example };
   }
 
   stop() {
@@ -120,12 +135,19 @@ class Metronome {
     const ctx = this.ctx;
     const cfg = this.cfg;
     if (!ctx || !cfg || !this.playing) return;
-    while (this.nextTime < ctx.currentTime + SCHEDULE_AHEAD_S) {
+    while (this.endTime === null && this.nextTime < ctx.currentTime + SCHEDULE_AHEAD_S) {
       const info = describeStep(cfg, this.index);
+      if (cfg.example && info.phase === "play" && info.bar >= cfg.example.bars) {
+        this.endTime = this.nextTime;
+        break;
+      }
       const dur = stepSeconds(info.bpm);
       if (info.phase === "play" && this.playStart === null) this.playStart = this.nextTime;
       if (info.click) this.click(this.nextTime, info.click);
-      if (info.guide) this.guide(this.nextTime, Math.min(dur * 0.9, 0.2));
+      if (info.guide) {
+        const share = cfg.staccato ? STACCATO : SUSTAIN;
+        this.guide(this.nextTime, Math.min(dur * info.holdSteps * share, MAX_NOTE_S));
+      }
       this.queue.push({ time: this.nextTime, info });
       this.nextTime += dur;
       this.index += 1;
@@ -140,6 +162,11 @@ class Metronome {
       latest = this.queue.shift()!.info;
     }
     if (latest) for (const fn of this.listeners) fn(latest);
+    if (this.endTime !== null && now >= this.endTime) {
+      this.stop();
+      for (const fn of this.endListeners) fn();
+      return;
+    }
     this.raf = requestAnimationFrame(this.frame);
   };
 

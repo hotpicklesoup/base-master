@@ -1209,3 +1209,31 @@ button {
 .confirm p {
   margin: 0;
 }
+
+/* example audio */
+.example {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.example-btn {
+  width: 100%;
+  min-height: 52px;
+  font-size: 17px;
+}
+
+.example-btn.on {
+  border-color: var(--jewel);
+}
+
+.example-btn:disabled {
+  opacity: 0.5;
+}
+
+.example-note {
+  margin: 0;
+  text-align: center;
+  font-size: 15px;
+  color: var(--ink-2);
+}

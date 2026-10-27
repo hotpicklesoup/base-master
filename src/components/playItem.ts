@@ -19,6 +19,7 @@ export interface PlayItem {
   stageLabel?: string;
   stageCount?: number;
   rampIn?: boolean;
+  staccato?: boolean;
 }
 
 const SONG_PATTERN = "x...".repeat(4);
@@ -77,5 +78,6 @@ export function toPlayItem(itemId: string, state: AppState, date: string): PlayI
     stageLabel: setting.stageLabel,
     stageCount,
     rampIn: ex.rampIn,
+    staccato: ex.staccato,
   };
 }
