@@ -13,9 +13,7 @@ Progress is saved in the browser on your device. Use Progress > Download a backu
 
 1. **Vercel:** import this repo at vercel.com/new. It detects Vite; no settings to change. Every push to `main` deploys, and every pull request gets a preview link.
 2. **Claude GitHub app:** install it from github.com/apps/claude on this repo.
-3. **Secret:** in the repo, Settings > Secrets and variables > Actions > New repository secret. Add **one** of:
-   - `ANTHROPIC_API_KEY`: create at platform.claude.com, under Settings > API keys. Billed per use.
-   - `CLAUDE_CODE_OAUTH_TOKEN`: run `claude setup-token` on a computer with Claude Code. Uses a Pro or Max plan.
+3. **Secret:** in the repo, Settings > Secrets and variables > Actions > New repository secret. Name it `CLAUDE_CODE_OAUTH_TOKEN`; the value comes from running `claude setup-token` on a computer with Claude Code. Runs count toward your Pro plan's usage limits, shared with your Claude chats. The token lasts a year. To pay per use instead, see the comment in `.github/workflows/claude.yml`.
 
 On iPhone, GitHub hides repo Settings in the mobile layout. In Safari tap **aA > Request Desktop Website**.
 

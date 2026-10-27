@@ -2,9 +2,8 @@
 # Mention @claude in an issue (title or body), an issue comment, or a PR review comment.
 # Claude reads CLAUDE.md, makes the change on a branch, and opens or updates a pull request.
 #
-# Needs ONE of these repository secrets (Settings > Secrets and variables > Actions):
-#   ANTHROPIC_API_KEY        - from platform.claude.com, billed per use
-#   CLAUDE_CODE_OAUTH_TOKEN  - from `claude setup-token` on a computer, uses a Pro/Max plan
+# Needs the repository secret CLAUDE_CODE_OAUTH_TOKEN (Settings > Secrets and variables > Actions),
+# made with `claude setup-token` on a computer. Runs count toward the Pro plan's usage limits.
 # Only people with write access to the repo can trigger it.
 
 name: Claude Code
@@ -52,8 +51,9 @@ jobs:
       - name: Run Claude Code
         uses: anthropics/claude-code-action@v1
         with:
-          # Whichever secret exists is used; the other is empty.
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Uses the Pro plan token from `claude setup-token`.
+          # To pay per use instead, add an ANTHROPIC_API_KEY secret and swap this line for:
+          #   anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Shell commands are off by default. These let Claude run the checks in CLAUDE.md.
           claude_args: |
